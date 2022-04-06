@@ -7,7 +7,7 @@ public class QuadTreeScript : MonoBehaviour
     public GameObject dot;
 
     private QuadTree qtree;
-    private List<Point> allPoints = new List<Point>();
+    private GameObject[] allObjects;
 
     // Start is called before the first frame update
     void Start()
@@ -18,35 +18,29 @@ public class QuadTreeScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        qtree = new QuadTree(new Rectangle(new Point(0f, 0f), 8, 4)); // Clear qtree
+
+        allObjects = GameObject.FindGameObjectsWithTag("Dot"); // Set obj array
+        //if (allObjects.Length != 0) Debug.Log(allObjects[0]);
+
+        // Insert points into qtree
+        if (allObjects.Length > 0)
+        {
+            foreach (GameObject obj in allObjects)
+            {
+                qtree.insert(obj.GetComponent<PointScript>().point);    
+            }
+        }
+
+        qtree.drawTree();
+
+        // Add dot to screen when MLB is clicked
         if (Input.GetMouseButtonDown(0))
         {
             Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             mousePos.z = 0f;
-            Debug.Log(mousePos);
-            allPoints.Add(new Point(mousePos.x, mousePos.y));
             Instantiate(dot, mousePos, Quaternion.identity);
         }
-
-        qtree = new QuadTree(new Rectangle(new Point(0f, 0f), 8, 4));
-
-        for (int i = 0; i < allPoints.Count; i++)
-        {
-            qtree.insert(allPoints[i]);
-        }
-
-        qtree.drawTree();
-    }
-}
-
-public class Point
-{
-    public float x;
-    public float y;
-
-    public Point(float a, float b)
-    {
-        x = a;
-        y = b;
     }
 }
 

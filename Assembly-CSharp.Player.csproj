@@ -53,8 +53,9 @@
     <UnityVersion>2020.3.21f1</UnityVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\QuadTreeScript.cs" />
     <Compile Include="Assets\Scripts\SettingsScript.cs" />
+    <Compile Include="Assets\Scripts\QuadTreeScript.cs" />
+    <Compile Include="Assets\Scripts\PointScript.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
