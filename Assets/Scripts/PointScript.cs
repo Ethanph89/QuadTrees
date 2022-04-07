@@ -9,14 +9,28 @@ public class PointScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        point = new Point(gameObject.GetComponent<Transform>().position.x, gameObject.GetComponent<Transform>().position.y);
+        point = new Point(gameObject.transform.position.x, gameObject.transform.position.y);
     }
 
     // Update is called once per frame
     void Update()
     {
-        point.x = gameObject.GetComponent<Transform>().position.x;
-        point.y = gameObject.GetComponent<Transform>().position.y;
+        if (Random.Range(0f, 1f) > 0.8f) move();
+        point.x = gameObject.transform.position.x;
+        point.y = gameObject.transform.position.y;
+    }
+
+    public void move()
+    {
+        float x = gameObject.transform.position.x;
+        float y = gameObject.transform.position.y;
+        float z = gameObject.transform.position.z;
+
+        gameObject.transform.position += new Vector3(Random.Range(-0.05f, 0.05f), Random.Range(-0.05f, 0.05f), 0);
+        if (x < -8f) gameObject.transform.position = gameObject.transform.position = new Vector3(-8f, y, z);
+        if (x > 8f) gameObject.transform.position = gameObject.transform.position = new Vector3(8f, y, z);
+        if (y < -4f) gameObject.transform.position = gameObject.transform.position = new Vector3(x, -4f, z);
+        if (y > 4f) gameObject.transform.position = gameObject.transform.position = new Vector3(x, 4f, z);
     }
 }
 

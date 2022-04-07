@@ -8,6 +8,8 @@ public class QuadTreeScript : MonoBehaviour
 
     private QuadTree qtree;
     private GameObject[] allObjects;
+    private Vector3 mousePos;
+    private Rectangle mouseRange;
 
     // Start is called before the first frame update
     void Start()
@@ -19,11 +21,15 @@ public class QuadTreeScript : MonoBehaviour
     void Update()
     {
         qtree = new QuadTree(new Rectangle(new Point(0f, 0f), 8, 4)); // Clear qtree
-
         allObjects = GameObject.FindGameObjectsWithTag("Dot"); // Set obj array
-        //if (allObjects.Length != 0) Debug.Log(allObjects[0]);
 
-        // Insert points into qtree
+        // Create and draw mouse range
+        mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mousePos.z = 0f;
+        mouseRange = new Rectangle(new Point(mousePos.x, mousePos.y), 2, 1);
+        mouseRange.drawRectangle();
+
+        // Insert points into qtree and draw
         if (allObjects.Length > 0)
         {
             foreach (GameObject obj in allObjects)
@@ -34,13 +40,26 @@ public class QuadTreeScript : MonoBehaviour
 
         qtree.drawTree();
 
-        // Add dot to screen when MLB is clicked
-        if (Input.GetMouseButtonDown(0))
+        // Add dot to screen when MLB is clicked and there is not already a dot there
+        if (Input.GetMouseButton(0))
         {
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0f;
-            Instantiate(dot, mousePos, Quaternion.identity);
+            bool canAdd = true;
+            if (allObjects.Length > 0)
+            {
+                foreach (GameObject obj in allObjects)
+                {
+                    if (obj.GetComponent<PointScript>().point.x == mousePos.x && obj.GetComponent<PointScript>().point.y == mousePos.y) canAdd = false;
+                }
+            }
+             if (canAdd == true) Instantiate(dot, mousePos, Quaternion.identity);
         }
+    }
+
+    private void OnGUI()
+    {
+        // Write query to screen
+        string countStr = qtree.queryRange(mouseRange).Count.ToString();
+        GUI.Label(new Rect(100, 50, 20, 50), countStr);
     }
 }
 
@@ -65,10 +84,44 @@ public class Rectangle
             point.y < center.y - ht);
     }
 
-    //TODO
-    public bool intersectsRectangle(Rectangle rect)
+    public bool intersectsRectangle(Rectangle other)
     {
-        return true;
+        bool xIntersects = false;
+        bool yIntersects = false;
+        float xL = center.x - wd;
+        float xR = center.x + wd;
+        float yT = center.y + ht;
+        float yB = center.y - ht;
+        float othxL = other.center.x - other.wd;
+        float othxR = other.center.x + other.wd;
+        float othyT = other.center.y + other.ht;
+        float othyB = other.center.y - other.ht;
+
+        if ((othxL >= xL && othxL <= xR) ||
+            (othxR >= xL && othxR <= xR) ||
+            (xL >= othxL && xL <= othxR) ||
+            (xR >= othxL && xR <= othxR))
+        {
+            xIntersects = true;
+        }
+
+        if ((othyB >= yB && othyB <= yT) ||
+            (othyT >= yB && othyT <= yT) ||
+            (yB >= othyB && yB <= othyT) ||
+            (yT >= othyB && yT <= othyT))
+        {
+            yIntersects = true;
+        }
+
+        return (xIntersects && yIntersects);
+    }
+
+    public void drawRectangle()
+    {
+        Debug.DrawLine(new Vector3(center.x - wd, center.y + ht, 0), new Vector3(center.x + wd, center.y + ht, 0), Color.green); // Top
+        Debug.DrawLine(new Vector3(center.x - wd, center.y - ht, 0), new Vector3(center.x + wd, center.y - ht, 0), Color.green); // Bottom
+        Debug.DrawLine(new Vector3(center.x - wd, center.y + ht, 0), new Vector3(center.x - wd, center.y - ht, 0), Color.green); // Left
+        Debug.DrawLine(new Vector3(center.x + wd, center.y + ht, 0), new Vector3(center.x + wd, center.y - ht, 0), Color.green); // Right
     }
 }
 
@@ -94,7 +147,7 @@ public class QuadTree
 
         if (!boundary.containsPoint(point)) {
             //Debug.Log("Does not contain point");
-            return false; 
+            return false;
         }
 
         if (points.Count < cap && nw == null)
@@ -138,6 +191,37 @@ public class QuadTree
         }
     }
 
+    public List<Point> queryRange(Rectangle range) 
+    {
+        List<Point> pointsFound = new List<Point>();
+
+        if (!(boundary.intersectsRectangle(range))) {
+            return pointsFound;
+        }
+
+        if (nw == null)
+        {
+            for (int i = 0; i < points.Count; i++)
+            {
+                if (range.containsPoint(points[i])) {
+                    pointsFound.Add(points[i]);
+                }
+            }
+        }
+
+        if (nw == null)
+        {
+            return pointsFound;
+        }
+
+        pointsFound.AddRange(nw.queryRange(range));
+        pointsFound.AddRange(ne.queryRange(range));
+        pointsFound.AddRange(sw.queryRange(range));
+        pointsFound.AddRange(se.queryRange(range));
+
+        return pointsFound;
+    }
+
     public void drawTree()
     {
         Debug.DrawLine(new Vector3(boundary.center.x - boundary.wd, boundary.center.y + boundary.ht, 0), new Vector3(boundary.center.x + boundary.wd, boundary.center.y + boundary.ht, 0), Color.white); // Top
@@ -149,12 +233,5 @@ public class QuadTree
         if (ne != null) ne.drawTree();
         if (sw != null) sw.drawTree();
         if (se != null) se.drawTree();
-    }
-
-    //TODO
-    public Point[] queryRange()
-    {
-        Point[] points = {};
-        return points;
     }
 }
