@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class QuadTreeScript : MonoBehaviour
@@ -10,6 +11,8 @@ public class QuadTreeScript : MonoBehaviour
     private GameObject[] allObjects;
     private Vector3 mousePos;
     private Rectangle mouseRange;
+    private List<GameObject> queriedObjects;
+    private bool showTree = true;
 
     // Start is called before the first frame update
     void Start()
@@ -23,7 +26,7 @@ public class QuadTreeScript : MonoBehaviour
         qtree = new QuadTree(new Rectangle(new Point(0f, 0f), 8, 4)); // Clear qtree
         allObjects = GameObject.FindGameObjectsWithTag("Dot"); // Set obj array
 
-        // Create and draw mouse range
+        // Create and draw mouse range + query trees
         mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mousePos.z = 0f;
         mouseRange = new Rectangle(new Point(mousePos.x, mousePos.y), 2, 1);
@@ -34,11 +37,19 @@ public class QuadTreeScript : MonoBehaviour
         {
             foreach (GameObject obj in allObjects)
             {
-                qtree.insert(obj.GetComponent<PointScript>().point);    
+                qtree.insert(obj); // Insert into tree
             }
         }
 
-        qtree.drawTree();
+        queriedObjects = qtree.queryRange(mouseRange); // Query qtree
+
+        // Stop queried objects from moving
+        foreach (GameObject obj in allObjects)
+        {
+            obj.GetComponent<PointScript>().canMove = queriedObjects.Contains(obj) ? obj.GetComponent<PointScript>().canMove = false : obj.GetComponent<PointScript>().canMove = true;
+        }
+
+        if (showTree == true) qtree.drawTree();
 
         // Add dot to screen when MLB is clicked and there is not already a dot there
         if (Input.GetMouseButton(0))
@@ -52,6 +63,11 @@ public class QuadTreeScript : MonoBehaviour
                 }
             }
              if (canAdd == true) Instantiate(dot, mousePos, Quaternion.identity);
+        }
+
+        if (Input.GetMouseButtonDown(1))
+        {
+            showTree = (showTree) ? false : true;
         }
     }
 
@@ -129,7 +145,7 @@ public class QuadTree
 {
     public Rectangle boundary;
     public const int cap = 4;
-    public List<Point> points = new List<Point>();
+    public List<GameObject> objects = new List<GameObject>();
 
     public QuadTree? nw = null;
     public QuadTree? ne = null;
@@ -141,19 +157,19 @@ public class QuadTree
         boundary = rect;
     }
 
-    public bool insert(Point point)
+    public bool insert(GameObject obj)
     {
-        //Debug.Log("Inserting point: (" + point.x + ", " + point.y + ")");
+        Point point = obj.GetComponent<PointScript>().point;
 
         if (!boundary.containsPoint(point)) {
             //Debug.Log("Does not contain point");
             return false;
         }
 
-        if (points.Count < cap && nw == null)
+        if (objects.Count < cap && nw == null)
         {
             //Debug.Log("Adding to points index: " + points.Count);
-            points.Add(point);
+            objects.Add(obj);
             return true;
         }
 
@@ -165,10 +181,10 @@ public class QuadTree
             subdivide();
         }
 
-        if (nw.insert(point)) return true;
-        if (ne.insert(point)) return true;
-        if (sw.insert(point)) return true;
-        if (se.insert(point)) return true;
+        if (nw.insert(obj)) return true;
+        if (ne.insert(obj)) return true;
+        if (sw.insert(obj)) return true;
+        if (se.insert(obj)) return true;
 
         Debug.Log("ERROR");
 
@@ -182,44 +198,45 @@ public class QuadTree
         sw = new QuadTree(new Rectangle(new Point(boundary.center.x - (boundary.wd / 2), boundary.center.y - (boundary.ht / 2)), boundary.wd / 2, boundary.ht / 2));
         se = new QuadTree(new Rectangle(new Point(boundary.center.x + (boundary.wd / 2), boundary.center.y - (boundary.ht / 2)), boundary.wd / 2, boundary.ht / 2));
 
-        for (int i = 0; i < points.Count; i++)
+        for (int i = 0; i < objects.Count; i++)
         {
-            if (nw.boundary.containsPoint(points[i])) nw.insert(points[i]);
-            else if (ne.boundary.containsPoint(points[i])) ne.insert(points[i]);
-            else if (sw.boundary.containsPoint(points[i])) sw.insert(points[i]);
-            else if (se.boundary.containsPoint(points[i])) se.insert(points[i]);
+            Point p = objects[i].GetComponent<PointScript>().point;
+            if (nw.boundary.containsPoint(p)) nw.insert(objects[i]);
+            else if (ne.boundary.containsPoint(p)) ne.insert(objects[i]);
+            else if (sw.boundary.containsPoint(p)) sw.insert(objects[i]);
+            else if (se.boundary.containsPoint(p)) se.insert(objects[i]);
         }
     }
 
-    public List<Point> queryRange(Rectangle range) 
+    public List<GameObject> queryRange(Rectangle range) 
     {
-        List<Point> pointsFound = new List<Point>();
+        List<GameObject> objsFound = new List<GameObject>();
 
         if (!(boundary.intersectsRectangle(range))) {
-            return pointsFound;
+            return objsFound;
         }
 
         if (nw == null)
         {
-            for (int i = 0; i < points.Count; i++)
+            for (int i = 0; i < objects.Count; i++)
             {
-                if (range.containsPoint(points[i])) {
-                    pointsFound.Add(points[i]);
+                if (range.containsPoint(objects[i].GetComponent<PointScript>().point)) {
+                    objsFound.Add(objects[i]);
                 }
             }
         }
 
         if (nw == null)
         {
-            return pointsFound;
+            return objsFound;
         }
 
-        pointsFound.AddRange(nw.queryRange(range));
-        pointsFound.AddRange(ne.queryRange(range));
-        pointsFound.AddRange(sw.queryRange(range));
-        pointsFound.AddRange(se.queryRange(range));
+        objsFound.AddRange(nw.queryRange(range));
+        objsFound.AddRange(ne.queryRange(range));
+        objsFound.AddRange(sw.queryRange(range));
+        objsFound.AddRange(se.queryRange(range));
 
-        return pointsFound;
+        return objsFound;
     }
 
     public void drawTree()

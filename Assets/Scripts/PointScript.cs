@@ -5,6 +5,7 @@ using UnityEngine;
 public class PointScript : MonoBehaviour
 {
     public Point point;
+    public bool canMove = true;
 
     // Start is called before the first frame update
     void Start()
@@ -15,7 +16,11 @@ public class PointScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Random.Range(0f, 1f) > 0.8f) move();
+        if (canMove)
+        {
+            if (Random.Range(0f, 1f) > 0.8f) move();
+        }
+        
         point.x = gameObject.transform.position.x;
         point.y = gameObject.transform.position.y;
     }
